@@ -1,30 +1,22 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:room_connect/firebase_options.dart';
 import 'package:room_connect/presentation/home_view.dart';
+import 'package:room_connect/services/notificaiton/fireabase_fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    sound: true,
-    badge: true,
-    criticalAlert: true,
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  String? deviceToken = await FirebaseMessaging.instance.getToken();
-  print("deviceToken\n$deviceToken");
-
-  FirebaseMessaging.instance.onTokenRefresh.listen((token) {
-    print("deviceToken\n$token");
-  });
-  FirebaseMessaging.onMessage.listen((remoteMessage) {
-    final notification = remoteMessage.notification;
-    if (notification != null) {
-      print("notification received \n${notification.title}\n${notification.body}");
-    }
-  });
+  FireabaseFcmService fcmService = FireabaseFcmService(
+    onToken: (token) {},
+    onRemoteMessageReceived: (message) {
+      print(message.data);
+    },
+  );
+  await fcmService.initialize();
   runApp(const MyApp());
 }
 
