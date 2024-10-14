@@ -14,6 +14,9 @@ class FireabaseFcmService {
   final _pushNotificationHandler = PushNotificationHandler();
   final Function(String token) onToken;
   final Function(RemoteMessage message) onRemoteMessageReceived;
+  String? _fcmToken;
+
+  String? get fcmToken => _fcmToken;
 
   FireabaseFcmService({
     required this.onToken,
@@ -29,6 +32,7 @@ class FireabaseFcmService {
   Future _setupMessageListener() async {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     FirebaseMessaging.onMessage.listen((message) {
+      print("🔥Fireabse Message received ${message.notification?.title}");
       _handleRemoteNotification(message);
     });
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
@@ -47,10 +51,12 @@ class FireabaseFcmService {
     String? token = await FirebaseMessaging.instance.getToken();
 
     if (token != null) {
+      _fcmToken = token;
       onToken(token);
     }
 
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      _fcmToken = newToken;
       onToken(newToken);
     });
   }

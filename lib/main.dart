@@ -1,8 +1,11 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:room_connect/api.dart';
 import 'package:room_connect/firebase_options.dart';
 import 'package:room_connect/presentation/home_view.dart';
 import 'package:room_connect/services/notificaiton/fireabase_fcm_service.dart';
+import 'package:room_connect/services/session/user_session_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,11 +14,24 @@ void main() async {
   );
 
   FireabaseFcmService fcmService = FireabaseFcmService(
-    onToken: (token) {},
+    onToken: (token) {
+      final username = GetIt.instance.get<UserSessionService>().getUserSessionSync()?.username;
+      if (username == null) {
+        return;
+      }
+      Api.setFCMToken(
+        username,
+        newToken: token,
+      );
+    },
     onRemoteMessageReceived: (message) {
       print(message.data);
     },
   );
+  final userSessionService = UserSessionService();
+  GetIt.instance.registerSingleton(fcmService);
+  GetIt.instance.registerSingleton(userSessionService);
+  await userSessionService.loadSession();
   await fcmService.initialize();
   runApp(const MyApp());
 }

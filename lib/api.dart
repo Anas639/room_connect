@@ -5,7 +5,10 @@ import 'package:http/http.dart';
 class Api {
   static String baseURL = "http://192.168.1.110:3000";
 
-  static Future<String> registerUser({required String username}) async {
+  static Future<String> registerUser({
+    required String username,
+    String? fcmToken,
+  }) async {
     String uri = "$baseURL/users/register";
     final response = await post(Uri.parse(uri),
         headers: {
@@ -13,6 +16,7 @@ class Api {
         },
         body: jsonEncode({
           "username": username,
+          if (fcmToken != null) "fcm_token": fcmToken,
         }));
     if (response.statusCode == 200) {
       return username;
@@ -50,5 +54,29 @@ class Api {
       exists = json['success'] ?? false;
     } catch (_) {}
     return exists;
+  }
+
+  static Future setFCMToken(String username, {required String newToken}) async {
+    String uri = "$baseURL/users/$username/fcmtoken";
+    final response = await put(Uri.parse(uri),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "fcm_token": newToken,
+        }));
+    if (response.statusCode == 200) {
+      return username;
+    }
+  }
+
+  static Future logout(String username) async {
+    String uri = "$baseURL/users/$username";
+    await delete(
+      Uri.parse(uri),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    );
   }
 }

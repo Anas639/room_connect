@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:room_connect/api.dart';
+import 'package:room_connect/services/notificaiton/fireabase_fcm_service.dart';
+import 'package:room_connect/services/session/user_session_service.dart';
 import 'package:room_connect/utils/debouncer.dart';
 
 class HomeView extends StatefulWidget {
@@ -10,7 +13,6 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  String? username;
   String? error;
   final Debouncer _debouncer = Debouncer();
 
@@ -20,11 +22,17 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    if (username != null) {
-      return buildHome();
-    }
+    return FutureBuilder(
+      future: GetIt.instance.get<UserSessionService>().getUserSession(),
+      builder: (context, snapshot) {
+        final user = snapshot.data;
+        if (user != null) {
+          return buildHome(username: user.username);
+        }
 
-    return buildRegister();
+        return buildRegister();
+      },
+    );
   }
 
   Widget buildRegister() {
@@ -82,10 +90,12 @@ class _HomeViewState extends State<HomeView> {
               ElevatedButton(
                 onPressed: _usernameValid
                     ? () {
-                        Api.registerUser(username: userController.text.toString()).then((value) {
-                          setState(() {
-                            username = value;
-                          });
+                        Api.registerUser(
+                          username: userController.text.toString(),
+                          fcmToken: GetIt.instance.get<FireabaseFcmService>().fcmToken,
+                        ).then((value) async {
+                          await GetIt.instance.get<UserSessionService>().createSession(value);
+                          setState(() {});
                         }).catchError((error) {
                           setState(() {
                             this.error = error;
@@ -110,10 +120,27 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget buildHome() {
+  Widget buildHome({required String username}) {
     return Scaffold(
       appBar: AppBar(
         title: Text("Welcome $username"),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final session = GetIt.instance.get<UserSessionService>();
+              final user = session.getUserSessionSync();
+              if (user == null) {
+                return;
+              }
+              await session.destroySession();
+              await Api.logout(user.username);
+              setState(() {});
+            },
+            icon: const Icon(
+              Icons.logout,
+            ),
+          ),
+        ],
       ),
       body: const Center(
         child: Text("No Rooms"),
